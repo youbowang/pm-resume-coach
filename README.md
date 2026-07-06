@@ -42,10 +42,10 @@ PM Resume Coach 是一个 C 端 AI 产品项目，目标用户是正在寻找产
 - [项目流程路线图](docs/PM-Resume-Coach-项目流程路线图.md)
 - [用户研究](docs/用户研究.md)
 - [竞品分析](docs/竞品分析.md)
+- [PRD](docs/PRD.md)
 
 后续将继续补充：
 
-- PRD
 - Prompt 设计
 - AI 效果评测
 - 原型链接
