@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PM Resume Coach Prototype</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="流程导航">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">PM</div>
+          <div>
+            <h1>PM Resume Coach</h1>
+            <p>AI 简历匹配诊断</p>
+          </div>
+        </div>
+
+        <nav class="steps" aria-label="原型步骤">
+          <button class="step is-active" data-step="0">
+            <span class="step-index">1</span>
+            <span>输入岗位 JD</span>
+          </button>
+          <button class="step" data-step="1">
+            <span class="step-index">2</span>
+            <span>查看能力拆解</span>
+          </button>
+          <button class="step" data-step="2">
+            <span class="step-index">3</span>
+            <span>输入简历</span>
+          </button>
+          <button class="step" data-step="3">
+            <span class="step-index">4</span>
+            <span>匹配诊断</span>
+          </button>
+          <button class="step" data-step="4">
+            <span class="step-index">5</span>
+            <span>经历改写</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-note">
+          <span class="note-label">MVP 范围</span>
+          <p>先诊断，再改写。第一版不做模板排版、岗位推荐和自动投递。</p>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">C 端 AI 产品原型</p>
+            <h2 id="screenTitle">输入目标岗位 JD</h2>
+          </div>
+          <div class="topbar-actions">
+            <button class="icon-button" id="resetBtn" title="重置原型" aria-label="重置原型">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 4v6h6M20 20v-6h-6" />
+                <path d="M20 9A8 8 0 0 0 6.6 5.2L4 10M4 15a8 8 0 0 0 13.4 3.8L20 14" />
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <section class="screen is-active" data-screen="0">
+          <div class="layout two-column">
+            <section class="panel">
+              <div class="panel-heading">
+                <p class="eyebrow">Step 1</p>
+                <h3>选择岗位类型并粘贴 JD</h3>
+              </div>
+
+              <div class="field-group">
+                <label>目标岗位类型</label>
+                <div class="segmented" role="group" aria-label="岗位类型">
+                  <button class="segment is-selected" data-job="AI 产品">AI 产品</button>
+                  <button class="segment" data-job="用户产品">用户产品</button>
+                  <button class="segment" data-job="增长产品">增长产品</button>
+                  <button class="segment" data-job="内容产品">内容产品</button>
+                </div>
+              </div>
+
+              <div class="field-group">
+                <label for="jdInput">目标岗位 JD</label>
+                <textarea id="jdInput" rows="12"></textarea>
+                <div class="field-meta">
+                  <span id="jdCount">0 字</span>
+                  <button class="text-button" id="fillJdBtn">填入示例 JD</button>
+                </div>
+              </div>
+
+              <div class="actions">
+                <button class="primary-button" id="analyzeJdBtn">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <path d="M14 2v6h6M9 15h6M9 11h3" />
+                  </svg>
+                  分析 JD
+                </button>
+              </div>
+            </section>
+
+            <aside class="insight-panel">
+              <h3>为什么先输入 JD</h3>
+              <p>简历优化不能只从简历出发。先拆解岗位要求，才能判断哪些经历应该被突出，哪些表达需要调整。</p>
+              <div class="mini-flow">
+                <span>JD</span>
+                <span>能力模型</span>
+                <span>简历诊断</span>
+                <span>经历改写</span>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="1">
+          <div class="layout">
+            <section class="panel">
+              <div class="panel-heading split">
+                <div>
+                  <p class="eyebrow">Step 2</p>
+                  <h3>JD 能力拆解</h3>
+                </div>
+                <span class="status-pill">岗位方向：<strong id="jobDirection">AI 产品</strong></span>
+              </div>
+
+              <div class="capability-grid" id="capabilityGrid"></div>
+
+              <div class="keyword-row" id="keywordRow"></div>
+
+              <div class="actions">
+                <button class="secondary-button" data-prev>返回修改 JD</button>
+                <button class="primary-button" data-next>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 12h14M13 5l7 7-7 7" />
+                  </svg>
+                  继续输入简历
+                </button>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="2">
+          <div class="layout two-column">
+            <section class="panel">
+              <div class="panel-heading">
+                <p class="eyebrow">Step 3</p>
+                <h3>粘贴简历内容</h3>
+              </div>
+
+              <div class="privacy-warning">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                建议先删除姓名、手机号、邮箱、学校证件号等敏感信息。
+              </div>
+
+              <div class="field-group">
+                <label for="resumeInput">简历内容</label>
+                <textarea id="resumeInput" rows="14"></textarea>
+                <div class="field-meta">
+                  <span id="resumeCount">0 字</span>
+                  <button class="text-button" id="fillResumeBtn">填入示例简历</button>
+                </div>
+              </div>
+
+              <div class="actions">
+                <button class="secondary-button" data-prev>返回能力拆解</button>
+                <button class="primary-button" id="diagnoseBtn">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M9 11l3 3L22 4" />
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                  </svg>
+                  开始诊断
+                </button>
+              </div>
+            </section>
+
+            <aside class="insight-panel">
+              <h3>输入规则</h3>
+              <ul class="check-list">
+                <li>优先保留项目经历、实习经历和校园活动</li>
+                <li>可以只粘贴希望优化的一段经历</li>
+                <li>缺少真实数据时，AI 只能提示补充</li>
+              </ul>
+            </aside>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="3">
+          <div class="layout">
+            <section class="panel">
+              <div class="panel-heading split">
+                <div>
+                  <p class="eyebrow">Step 4</p>
+                  <h3>简历匹配诊断</h3>
+                </div>
+                <div class="score-ring" aria-label="综合匹配度">
+                  <span id="scoreValue">72</span>
+                  <small>匹配度</small>
+                </div>
+              </div>
+
+              <div class="diagnosis-grid">
+                <article class="diagnosis-card">
+                  <h4>已体现能力</h4>
+                  <ul id="matchedList"></ul>
+                </article>
+                <article class="diagnosis-card">
+                  <h4>薄弱能力</h4>
+                  <ul id="missingList"></ul>
+                </article>
+              </div>
+
+              <div class="issue-list" id="issueList"></div>
+
+              <div class="actions">
+                <button class="secondary-button" data-prev>返回简历输入</button>
+                <button class="primary-button" data-next>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+                  </svg>
+                  选择经历改写
+                </button>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="4">
+          <div class="layout two-column wide-left">
+            <section class="panel">
+              <div class="panel-heading">
+                <p class="eyebrow">Step 5</p>
+                <h3>项目经历改写</h3>
+              </div>
+
+              <div class="compare">
+                <article>
+                  <h4>原始表达</h4>
+                  <p id="originalText"></p>
+                </article>
+                <article>
+                  <h4>优化版本</h4>
+                  <ul id="rewriteList"></ul>
+                </article>
+              </div>
+
+              <div class="explain-grid">
+                <article>
+                  <h4>改写理由</h4>
+                  <p id="rewriteReason"></p>
+                </article>
+                <article>
+                  <h4>风险提醒</h4>
+                  <p id="riskNote"></p>
+                </article>
+              </div>
+
+              <div class="actions">
+                <button class="secondary-button" data-prev>返回诊断</button>
+                <button class="primary-button" id="copyBtn">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="9" y="9" width="13" height="13" rx="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                  复制优化版本
+                </button>
+              </div>
+            </section>
+
+            <aside class="insight-panel">
+              <h3>设计重点</h3>
+              <ul class="check-list">
+                <li>不自动覆盖用户原简历</li>
+                <li>保留改写前后对比</li>
+                <li>每次改写都解释原因和风险</li>
+              </ul>
+              <div class="result-toast" id="toast">已复制到剪贴板</div>
+            </aside>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
