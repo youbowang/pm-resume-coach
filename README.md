@@ -46,6 +46,7 @@ PM Resume Coach 是一个 C 端 AI 产品项目，目标用户是正在寻找产
 - [Prompt 设计](docs/Prompt设计.md)
 - [AI 效果评测](docs/AI效果评测.md)
 - [Agent 实现说明](docs/Agent实现说明.md)
+- [Dify 实现方案](docs/Dify实现方案.md)
 - [交互式原型](prototype/原型链接.md)
 
 后续将继续补充：
@@ -77,3 +78,9 @@ http://localhost:3000
 ```
 
 需要在 `.env` 中配置 `OPENAI_API_KEY` 后，页面才能调用真实 AI Agent。
+
+## Dify 在线体验
+
+- [PM Resume Coach Dify Workflow](https://udify.app/workflow/OrSatus7QA7mEynb)
+
+这个 Dify 版本可以直接输入岗位类型、目标 JD、简历内容和重点优化经历，生成完整的 AI 简历优化报告。
