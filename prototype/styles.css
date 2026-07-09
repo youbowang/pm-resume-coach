@@ -489,6 +489,32 @@ textarea:focus {
   display: block;
 }
 
+.agent-banner {
+  display: none;
+  margin-bottom: 16px;
+  border: 1px solid #b7d4c8;
+  border-radius: 8px;
+  background: #edf8f3;
+  color: var(--green-dark);
+  padding: 12px 14px;
+  line-height: 1.6;
+}
+
+.agent-banner.is-visible {
+  display: block;
+}
+
+.agent-banner.is-error {
+  border-color: #e5b8b3;
+  background: #fff0ee;
+  color: var(--red);
+}
+
+.primary-button.is-loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
 @media (max-width: 960px) {
   .app-shell {
     grid-template-columns: 1fr;

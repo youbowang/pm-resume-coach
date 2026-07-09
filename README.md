@@ -45,6 +45,7 @@ PM Resume Coach 是一个 C 端 AI 产品项目，目标用户是正在寻找产
 - [PRD](docs/PRD.md)
 - [Prompt 设计](docs/Prompt设计.md)
 - [AI 效果评测](docs/AI效果评测.md)
+- [Agent 实现说明](docs/Agent实现说明.md)
 - [交互式原型](prototype/原型链接.md)
 
 后续将继续补充：
@@ -61,3 +62,18 @@ PM Resume Coach 是一个 C 端 AI 产品项目，目标用户是正在寻找产
 4. 它先拆解岗位能力，再诊断简历匹配度，最后生成可解释的项目经历改写建议
 5. 我还设计了 Prompt 和评测维度，避免 AI 只做泛泛润色或虚构经历
 6. 这个项目让我完整实践了用户研究、竞品分析、PRD、原型、AI 能力设计和效果评测
+
+## 本地运行 Agent
+
+```bash
+copy .env.example .env
+npm start
+```
+
+然后打开：
+
+```text
+http://localhost:3000
+```
+
+需要在 `.env` 中配置 `OPENAI_API_KEY` 后，页面才能调用真实 AI Agent。

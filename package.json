@@ -1,0 +1,13 @@
+{
+  "name": "pm-resume-coach",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI resume optimization agent prototype for product manager internship candidates.",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check prototype/app.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

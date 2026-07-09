@@ -20,6 +20,9 @@ AI 求职助手课程项目
 const state = {
   step: 0,
   jobType: "AI 产品",
+  jdAnalysis: null,
+  diagnosis: null,
+  rewrite: null,
 };
 
 const titles = [
@@ -98,6 +101,10 @@ const rewrittenBullets = [
   "对比闲鱼、小红书等平台交易流程，提炼校园场景下的低信任成本和高效率沟通机会，为功能设计提供依据。",
 ];
 
+function isHttpMode() {
+  return location.protocol === "http:" || location.protocol === "https:";
+}
+
 function qs(selector) {
   return document.querySelector(selector);
 }
@@ -119,8 +126,17 @@ function updateCount(inputId, countId) {
 }
 
 function renderCapabilities() {
-  qs("#jobDirection").textContent = state.jobType;
-  qs("#capabilityGrid").innerHTML = capabilities
+  const agentData = state.jdAnalysis;
+  const activeCapabilities = agentData?.capabilities?.length
+    ? agentData.capabilities.map((item) => ({
+        name: item.name,
+        priority: item.priority,
+        text: `${item.explanation || ""}${item.resumeEvidenceSuggestion ? ` 简历证据：${item.resumeEvidenceSuggestion}` : ""}`,
+      }))
+    : capabilities;
+  const activeKeywords = agentData?.keywords?.length ? agentData.keywords : keywords;
+  qs("#jobDirection").textContent = agentData?.jobDirection || state.jobType;
+  qs("#capabilityGrid").innerHTML = activeCapabilities
     .map(
       (item) => `
         <article class="capability-card">
@@ -131,13 +147,31 @@ function renderCapabilities() {
       `,
     )
     .join("");
-  qs("#keywordRow").innerHTML = keywords.map((keyword) => `<span class="keyword">${keyword}</span>`).join("");
+  qs("#keywordRow").innerHTML = activeKeywords.map((keyword) => `<span class="keyword">${keyword}</span>`).join("");
 }
 
 function renderDiagnosis() {
-  qs("#matchedList").innerHTML = matched.map((item) => `<li>${item}</li>`).join("");
-  qs("#missingList").innerHTML = missing.map((item) => `<li>${item}</li>`).join("");
-  qs("#issueList").innerHTML = issues
+  const agentData = state.diagnosis;
+  const activeMatched = agentData?.matched?.length
+    ? agentData.matched.map((item) => `${item.capability}：${item.evidence || item.explanation || ""}`)
+    : matched;
+  const activeMissing = agentData?.missing?.length
+    ? agentData.missing.map((item) => `${item.capability}：${item.problem || item.suggestion || ""}`)
+    : missing;
+  const activeIssues = agentData?.issues?.length
+    ? agentData.issues.map((item) => ({
+        level: item.level === "高" ? "high" : "",
+        title: item.title,
+        original: item.original,
+        tags: item.tags || [],
+        advice: item.advice,
+      }))
+    : issues;
+
+  if (agentData?.score) qs("#scoreValue").textContent = agentData.score;
+  qs("#matchedList").innerHTML = activeMatched.map((item) => `<li>${item}</li>`).join("");
+  qs("#missingList").innerHTML = activeMissing.map((item) => `<li>${item}</li>`).join("");
+  qs("#issueList").innerHTML = activeIssues
     .map(
       (issue) => `
         <article class="issue ${issue.level}">
@@ -152,12 +186,66 @@ function renderDiagnosis() {
 }
 
 function renderRewrite() {
-  qs("#originalText").textContent = issues[0].original;
-  qs("#rewriteList").innerHTML = rewrittenBullets.map((item) => `<li>${item}</li>`).join("");
-  qs("#rewriteReason").textContent =
+  const agentData = state.rewrite;
+  qs("#originalText").textContent = agentData?.original || state.diagnosis?.issues?.[0]?.original || issues[0].original;
+  qs("#rewriteList").innerHTML = (agentData?.bullets?.length ? agentData.bullets : rewrittenBullets).map((item) => `<li>${item}</li>`).join("");
+  qs("#rewriteReason").textContent = agentData?.reason ||
     "优化版本补充了目标场景、用户调研、需求归纳、页面原型和竞品结论，比原句更能体现用户研究、需求分析、原型设计和竞品分析能力。";
-  qs("#riskNote").textContent =
+  qs("#riskNote").textContent = agentData?.risk ||
     "请确认调研人数、需求分类和页面范围是否真实。如果没有准确数量，应使用真实数据或保守表达，不能编造增长结果。";
+}
+
+function showAgentMessage(message, isError = false) {
+  let banner = qs("#agentBanner");
+  if (!banner) {
+    banner = document.createElement("div");
+    banner.id = "agentBanner";
+    banner.className = "agent-banner";
+    qs(".workspace").insertBefore(banner, qs(".workspace .screen"));
+  }
+  banner.textContent = message;
+  banner.classList.add("is-visible");
+  banner.classList.toggle("is-error", isError);
+}
+
+function setLoading(button, loading) {
+  button.classList.toggle("is-loading", loading);
+  button.disabled = loading;
+}
+
+async function callAgent(action, button) {
+  if (!isHttpMode()) {
+    showAgentMessage("当前是 file:// 静态预览。要使用真实 Agent，请在项目目录运行 npm start，然后打开 http://localhost:3000。", true);
+    return null;
+  }
+  setLoading(button, true);
+  showAgentMessage("Agent 正在生成结果...");
+  try {
+    const response = await fetch("/api/agent", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        action,
+        input: {
+          jobType: state.jobType,
+          jd: qs("#jdInput").value.trim(),
+          resume: qs("#resumeInput").value.trim(),
+          selectedExperience: state.diagnosis?.issues?.[0]?.original || issues[0].original,
+          jdAnalysis: state.jdAnalysis,
+          diagnosis: state.diagnosis,
+        },
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Agent 调用失败");
+    showAgentMessage(`Agent 已完成生成，模型：${data.model}`);
+    return data.result;
+  } catch (error) {
+    showAgentMessage(`Agent 调用失败：${error.message}`, true);
+    return null;
+  } finally {
+    setLoading(button, false);
+  }
 }
 
 function init() {
@@ -192,8 +280,24 @@ function init() {
     qs("#resumeInput").value = sampleResume;
     updateCount("#resumeInput", "#resumeCount");
   });
-  qs("#analyzeJdBtn").addEventListener("click", () => setStep(1));
-  qs("#diagnoseBtn").addEventListener("click", () => setStep(3));
+  qs("#analyzeJdBtn").addEventListener("click", async (event) => {
+    const result = await callAgent("analyze-jd", event.currentTarget);
+    if (result) state.jdAnalysis = result;
+    renderCapabilities();
+    setStep(1);
+  });
+  qs("#diagnoseBtn").addEventListener("click", async (event) => {
+    const result = await callAgent("diagnose", event.currentTarget);
+    if (result) state.diagnosis = result;
+    renderDiagnosis();
+    setStep(3);
+  });
+  qs("#rewriteBtn").addEventListener("click", async (event) => {
+    const result = await callAgent("rewrite", event.currentTarget);
+    if (result) state.rewrite = result;
+    renderRewrite();
+    setStep(4);
+  });
   qs("#resetBtn").addEventListener("click", () => setStep(0));
   qs("#copyBtn").addEventListener("click", async () => {
     const text = rewrittenBullets.map((item) => `- ${item}`).join("\n");
