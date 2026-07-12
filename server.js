@@ -4,6 +4,7 @@ const path = require("node:path");
 
 const ROOT = __dirname;
 const PUBLIC_DIR = path.join(ROOT, "prototype");
+const KNOWLEDGE_DIR = path.join(ROOT, "knowledge_base");
 
 function loadEnvFile() {
   const envPath = path.join(ROOT, ".env");
@@ -33,6 +34,88 @@ const MIME_TYPES = {
   ".json": "application/json; charset=utf-8",
 };
 
+const STOP_WORDS = new Set([
+  "the",
+  "and",
+  "for",
+  "with",
+  "this",
+  "that",
+  "一个",
+  "以及",
+  "如果",
+  "用户",
+  "简历",
+  "岗位",
+  "产品",
+  "能力",
+]);
+
+function tokenize(text) {
+  return [
+    ...String(text || "")
+      .toLowerCase()
+      .matchAll(/[a-z0-9]+|[\u4e00-\u9fa5]{2,}/g),
+  ]
+    .map((match) => match[0])
+    .filter((token) => token.length > 1 && !STOP_WORDS.has(token));
+}
+
+function splitKnowledge(content) {
+  return content
+    .split(/\n(?=##\s+)/)
+    .map((chunk) => chunk.trim())
+    .filter(Boolean);
+}
+
+function loadKnowledgeBase() {
+  if (!fs.existsSync(KNOWLEDGE_DIR)) return [];
+  return fs
+    .readdirSync(KNOWLEDGE_DIR)
+    .filter((fileName) => fileName.endsWith(".md"))
+    .flatMap((fileName) => {
+      const filePath = path.join(KNOWLEDGE_DIR, fileName);
+      const content = fs.readFileSync(filePath, "utf8");
+      return splitKnowledge(content).map((chunk, index) => ({
+        id: `${fileName}#${index + 1}`,
+        source: fileName,
+        text: chunk,
+        tokens: tokenize(chunk),
+      }));
+    });
+}
+
+const KNOWLEDGE_CHUNKS = loadKnowledgeBase();
+
+function retrieveKnowledge(action, input) {
+  const query = [
+    action,
+    input.jobType,
+    input.jd,
+    input.resume,
+    input.selectedExperience,
+    JSON.stringify(input.jdAnalysis || {}),
+    JSON.stringify(input.diagnosis || {}),
+  ].join("\n");
+  const queryTokens = new Set(tokenize(query));
+  if (!queryTokens.size || !KNOWLEDGE_CHUNKS.length) return [];
+
+  return KNOWLEDGE_CHUNKS.map((chunk) => {
+    const overlap = chunk.tokens.filter((token) => queryTokens.has(token)).length;
+    const actionBoost =
+      (action === "analyze-jd" && /岗位|能力|AI 产品经理|C 端/.test(chunk.text)) ||
+      (action === "diagnose" && /能力|表达|证据|真实性/.test(chunk.text)) ||
+      (action === "rewrite" && /bullet|表达|过度包装|改写/.test(chunk.text))
+        ? 3
+        : 0;
+    return { ...chunk, score: overlap + actionBoost };
+  })
+    .filter((chunk) => chunk.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4)
+    .map(({ id, source, text, score }) => ({ id, source, text, score }));
+}
+
 function sendJson(res, status, payload) {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(payload));
@@ -60,7 +143,7 @@ function resolveStaticPath(urlPath) {
   return filePath;
 }
 
-function buildTaskPrompt(action, input) {
+function buildTaskPrompt(action, input, retrievedKnowledge) {
   const system = `你是 PM Resume Coach，一名面向产品经理实习求职者的 AI 简历优化助手。
 
 你必须遵守：
@@ -69,7 +152,8 @@ function buildTaskPrompt(action, input) {
 3. 如果简历缺少数据，只能提示用户补充真实数据。
 4. 不得把“参与”“协助”改写成“主导”“负责整体”，除非原文能证明。
 5. 输出必须具体、可执行，避免泛泛建议。
-6. 只输出合法 JSON，不要输出 Markdown 代码块。`;
+6. 只输出合法 JSON，不要输出 Markdown 代码块。
+7. 参考知识库只用于能力判断、表达规则和风险边界，不得用知识库替代用户真实经历。`;
 
   const common = {
     jobType: input.jobType || "产品经理实习",
@@ -79,6 +163,9 @@ function buildTaskPrompt(action, input) {
     jdAnalysis: input.jdAnalysis || null,
     diagnosis: input.diagnosis || null,
   };
+  const knowledgeContext = retrievedKnowledge.length
+    ? retrievedKnowledge.map((item) => `来源：${item.source}\n${item.text}`).join("\n\n---\n\n")
+    : "未召回相关知识库片段。请只基于用户输入和通用产品经理简历原则输出。";
 
   if (action === "analyze-jd") {
     return `${system}
@@ -87,6 +174,9 @@ function buildTaskPrompt(action, input) {
 
 输入：
 ${JSON.stringify(common, null, 2)}
+
+参考知识库：
+${knowledgeContext}
 
 请输出 JSON，结构必须为：
 {
@@ -113,6 +203,9 @@ ${JSON.stringify(common, null, 2)}
 
 输入：
 ${JSON.stringify(common, null, 2)}
+
+参考知识库：
+${knowledgeContext}
 
 请输出 JSON，结构必须为：
 {
@@ -152,6 +245,9 @@ ${JSON.stringify(common, null, 2)}
 输入：
 ${JSON.stringify(common, null, 2)}
 
+参考知识库：
+${knowledgeContext}
+
 请输出 JSON，结构必须为：
 {
   "original": "原始表达",
@@ -180,6 +276,7 @@ async function callOpenAI(action, input) {
     throw error;
   }
 
+  const retrievedKnowledge = retrieveKnowledge(action, input);
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
@@ -188,7 +285,7 @@ async function callOpenAI(action, input) {
     },
     body: JSON.stringify({
       model: MODEL,
-      input: buildTaskPrompt(action, input),
+      input: buildTaskPrompt(action, input, retrievedKnowledge),
       temperature: 0.2,
       max_output_tokens: 1800,
     }),
@@ -206,7 +303,10 @@ async function callOpenAI(action, input) {
     data.output_text ||
     data.output?.flatMap((item) => item.content || []).find((content) => content.type === "output_text")?.text ||
     "";
-  return extractJson(text);
+  return {
+    result: extractJson(text),
+    knowledge: retrievedKnowledge.map(({ id, source, score }) => ({ id, source, score })),
+  };
 }
 
 async function handleAgent(req, res) {
@@ -217,8 +317,8 @@ async function handleAgent(req, res) {
     if (!["analyze-jd", "diagnose", "rewrite"].includes(action)) {
       return sendJson(res, 400, { error: "Unsupported action." });
     }
-    const result = await callOpenAI(action, payload.input || {});
-    return sendJson(res, 200, { result, model: MODEL });
+    const { result, knowledge } = await callOpenAI(action, payload.input || {});
+    return sendJson(res, 200, { result, model: MODEL, knowledge });
   } catch (error) {
     return sendJson(res, error.status || 500, {
       error: error.message || "Agent request failed.",
@@ -234,6 +334,19 @@ const server = http.createServer((req, res) => {
       ok: true,
       hasApiKey: Boolean(process.env.OPENAI_API_KEY),
       model: MODEL,
+      knowledgeChunks: KNOWLEDGE_CHUNKS.length,
+    });
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/knowledge") {
+    const query = url.searchParams.get("q") || "";
+    return sendJson(res, 200, {
+      chunks: retrieveKnowledge("diagnose", { jd: query, resume: query }).map(({ id, source, score, text }) => ({
+        id,
+        source,
+        score,
+        preview: text.slice(0, 240),
+      })),
     });
   }
 

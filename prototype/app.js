@@ -238,7 +238,8 @@ async function callAgent(action, button) {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Agent 调用失败");
-    showAgentMessage(`Agent 已完成生成，模型：${data.model}`);
+    const knowledgeCount = data.knowledge?.length || 0;
+    showAgentMessage(`Agent 已完成生成，模型：${data.model}，召回知识库片段：${knowledgeCount} 个`);
     return data.result;
   } catch (error) {
     showAgentMessage(`Agent 调用失败：${error.message}`, true);

@@ -10,6 +10,8 @@ PM Resume Coach 已从静态交互原型升级为本地可运行的 AI Agent 原
 2. 简历匹配诊断
 3. 项目经历改写
 
+同时，当前版本已经接入轻量 RAG 知识库。Agent 在调用模型前会从 `knowledge_base/` 中检索相关知识片段，并将其作为参考知识库注入 Prompt。
+
 前端页面仍位于 `prototype/index.html`，但需要通过本地 Node 服务打开，才能调用真实 Agent。
 
 ## 2. 技术方案
@@ -23,6 +25,8 @@ PM Resume Coach 已从静态交互原型升级为本地可运行的 AI Agent 原
   ↓
 Node.js 本地服务
   ↓
+知识库检索
+  ↓
 OpenAI Responses API
   ↓
 结构化 JSON 返回前端展示
@@ -35,6 +39,7 @@ OpenAI Responses API
 | `server.js` | 本地 Agent 服务，负责静态文件托管和 OpenAI API 调用 |
 | `package.json` | 启动脚本和基础项目信息 |
 | `.env.example` | 环境变量示例，不包含真实密钥 |
+| `knowledge_base/` | RAG 知识库语料 |
 | `prototype/index.html` | Agent 前端页面 |
 | `prototype/app.js` | 前端交互和 API 调用逻辑 |
 | `prototype/styles.css` | 原型样式 |
@@ -77,6 +82,12 @@ http://localhost:3000
 5. 点击“选择经历改写”
 
 如果没有配置 `OPENAI_API_KEY`，页面会提示 Agent 调用失败。
+
+也可以检查知识库检索接口：
+
+```text
+http://localhost:3000/api/knowledge?q=AI产品经理 Prompt 评测 简历
+```
 
 ## 5. Agent 动作设计
 
@@ -138,8 +149,28 @@ Agent Prompt 中包含以下约束：
 - 不得把“参与/协助”无依据改成“主导/负责整体”
 - 缺少信息时必须提示用户补充真实数据
 - 输出必须为结构化 JSON
+- RAG 知识库只作为能力判断、表达规则和风险边界参考，不能替代用户真实经历
 
-## 7. 当前版本限制
+## 7. RAG 接入方式
+
+当前 RAG 是轻量本地实现，没有引入向量数据库，原因是作品集阶段更重要的是展示 AI 产品设计判断和闭环能力。
+
+检索逻辑：
+
+1. 读取 `knowledge_base/` 下的 Markdown 文件
+2. 按标题切分知识片段
+3. 根据 JD、简历、任务类型和历史结果做关键词匹配
+4. 召回前 4 个相关片段
+5. 将片段注入 Prompt 的“参考知识库”部分
+
+知识库当前包含：
+
+- 产品经理实习能力模型
+- 产品经理简历表达规则
+- AI 产品 Prompt、RAG 和效果评测方法
+- AI 产品经理岗位能力映射
+
+## 8. 当前版本限制
 
 当前 Agent 是 MVP 原型，仍有以下限制：
 
@@ -148,11 +179,11 @@ Agent Prompt 中包含以下约束：
 - 不保存历史分析记录
 - 没有文件上传，只支持文本粘贴
 - 没有流式输出
-- 没有自动化评测脚本
+- 当前 RAG 使用关键词检索，尚未接入向量数据库
 
 这些限制是有意保留的，因为当前阶段重点是验证核心 AI 产品流程。
 
-## 8. 后续可迭代方向
+## 9. 后续可迭代方向
 
 - 增加流式输出，提升等待体验
 - 增加 JSON Schema 校验，提升结构稳定性
@@ -160,4 +191,4 @@ Agent Prompt 中包含以下约束：
 - 支持简历 PDF / Word 上传
 - 支持多岗位简历版本对比
 - 增加面试追问生成 Agent
-
+- 将本地关键词 RAG 升级为 Dify Knowledge Base 或向量检索
